@@ -1,0 +1,98 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+type Corte = {
+  dia: string;
+  porMetodo: Array<{ metodo: string; conteo: number; totalCentavos: number }>;
+  totalCentavos: number;
+  ventasPagadas: number;
+  comisionEvitadaCentavos: number;
+  tasaReferencia: number;
+};
+
+const NOMBRE: Record<string, string> = {
+  codi_pn: 'CoDi al teléfono',
+  codi_qr: 'CoDi por QR',
+};
+
+function pesos(centavos: number): string {
+  return (centavos / 100).toLocaleString('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+  });
+}
+
+export default function CortePage() {
+  const [corte, setCorte] = useState<Corte | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/corte', { cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('No se pudo leer el corte');
+        return (await r.json()) as Corte;
+      })
+      .then(setCorte)
+      .catch((e: Error) => setError(e.message));
+  }, []);
+
+  return (
+    <main className="marco">
+      <header className="barra">
+        <span className="marca">El Mostrador</span>
+        <a href="/">Cobrar</a>
+      </header>
+
+      <div className="corte-head">
+        <h1>Corte del día</h1>
+        <span>{corte?.dia ?? '—'} · solo ventas pagadas</span>
+      </div>
+
+      {error && <p className="aviso">{error}</p>}
+
+      {!corte && !error && <p className="vacio">Leyendo la caja…</p>}
+
+      {corte && (
+        <>
+          <div className="tarjeta">
+            <div className="mini">Total cobrado</div>
+            <div className="total">{pesos(corte.totalCentavos)}</div>
+            <div className="mini">
+              {corte.ventasPagadas} {corte.ventasPagadas === 1 ? 'venta' : 'ventas'}
+            </div>
+          </div>
+
+          <div className="tarjeta">
+            {corte.porMetodo.length === 0 ? (
+              <p className="vacio">Todavía no hay cobros hoy.</p>
+            ) : (
+              corte.porMetodo.map((l) => (
+                <div className="linea-metodo" key={l.metodo}>
+                  <span>
+                    {NOMBRE[l.metodo] ?? l.metodo}
+                    <br />
+                    <small style={{ color: 'var(--tinta-suave)' }}>
+                      {l.conteo} {l.conteo === 1 ? 'cobro' : 'cobros'}
+                    </small>
+                  </span>
+                  <b>{pesos(l.totalCentavos)}</b>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="tarjeta ahorro">
+            <div className="mini">Comisión que no se fue</div>
+            <div className="total">{pesos(corte.comisionEvitadaCentavos)}</div>
+            <p className="mini">
+              Calculado a la tasa de referencia de {(corte.tasaReferencia * 100).toFixed(2)}%
+              (terminal con IVA). Si el negocio ya tiene tarifa promocional, el ahorro real es menor.
+            </p>
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
