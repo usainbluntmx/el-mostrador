@@ -113,3 +113,16 @@ export async function getTransaccion(id: string): Promise<Transaccion> {
 export function statusDe(t: Transaccion): string | undefined {
   return t.status ?? t.transaction?.status;
 }
+
+export type TransaccionQr = {
+  items?: Array<{ id?: string; status?: string; amount?: number }>;
+};
+
+/**
+ * Estado de un QR por su IDC. OJO: no es el mismo endpoint que el push.
+ * `/transaction/{id}` espera el ULID de una transacción; para un QR hay que
+ * pedir `/transaction/codi/qr/{idc}`, que devuelve la lista de pagos del QR.
+ */
+export async function getTransaccionesQr(idc: string): Promise<TransaccionQr> {
+  return llamar<TransaccionQr>(`/transaction/codi/qr/${encodeURIComponent(idc)}`);
+}

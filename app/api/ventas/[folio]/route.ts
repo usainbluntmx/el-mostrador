@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getVenta, guardarVenta } from '@/lib/store';
 import { estadoDesdePey, puedeTransicionar, transicionar } from '@/lib/domain/venta';
-import { getTransaccion, statusDe } from '@/lib/pey/client';
+import { getTransaccion, getTransaccionesQr, statusDe } from '@/lib/pey/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,11 +23,22 @@ export async function GET(_req: Request, ctx: { params: Promise<{ folio: string 
 
   if (venta.estado === 'cobrando' && venta.peyId) {
     try {
-      const t = await getTransaccion(venta.peyId);
-      const nuevo = estadoDesdePey(statusDe(t));
-      if (nuevo && nuevo !== venta.estado && puedeTransicionar(venta.estado, nuevo)) {
-        venta = transicionar(venta, nuevo);
-        guardarVenta(venta);
+      if (venta.metodo === 'codi_qr') {
+        // El QR se identifica por IDC, no por ULID de transacción.
+        const r = await getTransaccionesQr(venta.peyId);
+        const pagada = r.items?.find((t) => (t.status ?? '').toUpperCase() === 'PAID');
+        if (pagada && puedeTransicionar(venta.estado, 'pagada')) {
+          venta = transicionar(venta, 'pagada');
+          venta = { ...venta, peyId: pagada.id ?? venta.peyId };
+          guardarVenta(venta);
+        }
+      } else {
+        const t = await getTransaccion(venta.peyId);
+        const nuevo = estadoDesdePey(statusDe(t));
+        if (nuevo && nuevo !== venta.estado && puedeTransicionar(venta.estado, nuevo)) {
+          venta = transicionar(venta, nuevo);
+          guardarVenta(venta);
+        }
       }
     } catch {
       /* si pey no responde, se devuelve el último estado conocido */
