@@ -147,17 +147,19 @@ export default function Cobrar() {
         </div>
         <div className="acciones">
           {venta.estado === 'pagada' ? (
-            <button className="primario" onClick={liberar}>
-              Liberar para surtir
-            </button>
+            <>
+              <button className="primario" onClick={liberar}>
+                Liberar para surtir
+              </button>
+              <button className="secundario" onClick={nueva}>
+                Nueva venta
+              </button>
+            </>
           ) : (
             <button className="primario" onClick={nueva}>
               Nueva venta
             </button>
           )}
-          <button className="secundario" onClick={nueva}>
-            {venta.estado === 'pagada' ? 'Nueva venta' : 'Listo'}
-          </button>
         </div>
         <div className="nota">El comprobante ya está en el banco del cliente.</div>
       </div>

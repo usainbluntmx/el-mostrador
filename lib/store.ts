@@ -174,3 +174,38 @@ export function _resetParaPruebas(): void {
   db?.close();
   db = null;
 }
+
+/** Para /api/salud: ¿está entrando el webhook o solo funciona el respaldo? */
+export function salud(): {
+  ventas: number;
+  pagadas: number;
+  eventos: number;
+  ultimoEvento: { tipo: string; recibidoEn: number } | null;
+  ultimaVenta: { folio: number; estado: string; creadaEn: number } | null;
+} {
+  const d = abrir();
+  const v = d
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              COALESCE(SUM(CASE WHEN estado IN ('pagada','liberada') THEN 1 ELSE 0 END),0) AS pagadas
+       FROM ventas`,
+    )
+    .get() as { total: number; pagadas: number };
+  const e = d.prepare('SELECT COUNT(*) AS total FROM eventos').get() as { total: number };
+  const ultimo = d
+    .prepare('SELECT tipo, recibido_en FROM eventos ORDER BY recibido_en DESC LIMIT 1')
+    .get() as { tipo: string; recibido_en: number } | undefined;
+  const ultima = d
+    .prepare('SELECT folio, estado, creada_en FROM ventas ORDER BY folio DESC LIMIT 1')
+    .get() as { folio: number; estado: string; creada_en: number } | undefined;
+
+  return {
+    ventas: Number(v.total),
+    pagadas: Number(v.pagadas),
+    eventos: Number(e.total),
+    ultimoEvento: ultimo ? { tipo: ultimo.tipo, recibidoEn: ultimo.recibido_en } : null,
+    ultimaVenta: ultima
+      ? { folio: ultima.folio, estado: ultima.estado, creadaEn: ultima.creada_en }
+      : null,
+  };
+}

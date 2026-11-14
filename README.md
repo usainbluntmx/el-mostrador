@@ -102,6 +102,7 @@ El QR se genera por venta y se muestra en la pantalla. El QR fijo sin monto y si
 | `POST` | `/api/ventas/:folio/cancelar` | Cancela si aún no está pagada |
 | `POST` | `/api/webhooks/pey` | Firma → dedupe → marca pagada |
 | `GET` | `/api/corte?dia=YYYY-MM-DD` | Totales por método + comisión evitada |
+| `GET` | `/api/salud` | Diagnóstico: ¿el webhook está entrando o solo el respaldo? |
 
 ### Máquina de estados
 
