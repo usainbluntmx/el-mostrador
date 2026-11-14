@@ -8,6 +8,10 @@ cuánto se dejó de pagar en comisión.
 
 **Hackatón México 2026** — pista principal: uso de CoDi y del API de pey.
 
+| Cobrar | Pagado | Corte |
+|---|---|---|
+| ![Cobrar](docs/cobrar.png) | ![Pagado](docs/pagado.png) | ![Corte](docs/corte.png) |
+
 ---
 
 ## Estado actual
