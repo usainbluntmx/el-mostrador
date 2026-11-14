@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getVentaPorNumRef, registrarEvento, guardarVenta } from '@/lib/store';
+import { getVentaPorNumRef, registrarEvento, guardarVenta, registrarDiagnostico } from '@/lib/store';
 import { puedeTransicionar, transicionar } from '@/lib/domain/venta';
 import { getConfig } from '@/lib/config';
 import { leerHeaders, verificarWebhook, FirmaInvalida } from '@/lib/pey/webhook';
@@ -41,7 +41,8 @@ export async function POST(req: Request) {
     verificado = verificarWebhook(crudo, leerHeaders(req.headers), secreto);
   } catch (e) {
     const motivo = e instanceof FirmaInvalida ? e.message : 'firma inválida';
-    // 401: que pey reintente no sirve, pero queda en el log.
+    // Queda el rastro: así se distingue "no llega nada" de "llega mal firmado".
+    registrarDiagnostico('webhook_rechazado', motivo);
     return NextResponse.json({ error: motivo }, { status: 401 });
   }
 
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
   try {
     payload = JSON.parse(crudo) as PayloadPago;
   } catch {
+    registrarDiagnostico('webhook_rechazado', 'cuerpo no es JSON');
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 

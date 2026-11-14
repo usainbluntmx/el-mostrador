@@ -36,6 +36,12 @@ function abrir(): DatabaseSync {
       payload      TEXT NOT NULL,
       recibido_en  INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS diagnostico (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo         TEXT NOT NULL,
+      detalle      TEXT,
+      recibido_en  INTEGER NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_ventas_creada ON ventas(creada_en);
   `);
   return db;
@@ -173,6 +179,42 @@ export function corte(desde: number, hasta: number): Corte {
 export function _resetParaPruebas(): void {
   db?.close();
   db = null;
+}
+
+/**
+ * Deja rastro de lo que no llega a ser evento aceptado: webhooks rechazados
+ * por firma y reconciliaciones que salvaron una venta. Sin esto, un
+ * `eventos: 0` es indistinguible de "no llega nada".
+ */
+export function registrarDiagnostico(tipo: string, detalle = ''): void {
+  const d = abrir();
+  d.prepare('INSERT INTO diagnostico (tipo, detalle, recibido_en) VALUES (?, ?, ?)').run(
+    tipo,
+    detalle,
+    Date.now(),
+  );
+  // Solo interesan los últimos 100: esto es un tablero, no un archivo histórico.
+  d.exec('DELETE FROM diagnostico WHERE id NOT IN (SELECT id FROM diagnostico ORDER BY id DESC LIMIT 100)');
+}
+
+export type ConteoDiagnostico = { tipo: string; total: number; ultimoEn: number };
+
+export function conteoDiagnostico(): { conteos: ConteoDiagnostico[]; ultimoRechazo: { motivo: string; en: number } | null } {
+  const d = abrir();
+  const conteos = d
+    .prepare('SELECT tipo, COUNT(*) AS total, MAX(recibido_en) AS ultimo_en FROM diagnostico GROUP BY tipo')
+    .all() as Array<{ tipo: string; total: number; ultimo_en: number }>;
+
+  const rechazo = d
+    .prepare(
+      "SELECT detalle, recibido_en FROM diagnostico WHERE tipo = 'webhook_rechazado' ORDER BY id DESC LIMIT 1",
+    )
+    .get() as { detalle: string | null; recibido_en: number } | undefined;
+
+  return {
+    conteos: conteos.map((c) => ({ tipo: c.tipo, total: Number(c.total), ultimoEn: Number(c.ultimo_en) })),
+    ultimoRechazo: rechazo ? { motivo: rechazo.detalle ?? '', en: rechazo.recibido_en } : null,
+  };
 }
 
 /** Para /api/salud: ¿está entrando el webhook o solo funciona el respaldo? */

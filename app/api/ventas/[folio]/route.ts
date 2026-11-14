@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getVenta, guardarVenta } from '@/lib/store';
+import { getVenta, guardarVenta, registrarDiagnostico } from '@/lib/store';
 import { estadoDesdePey, puedeTransicionar, transicionar } from '@/lib/domain/venta';
 import { getTransaccion, getTransaccionesQr, statusDe } from '@/lib/pey/client';
 
@@ -31,6 +31,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ folio: string 
           venta = transicionar(venta, 'pagada');
           venta = { ...venta, peyId: pagada.id ?? venta.peyId };
           guardarVenta(venta);
+          registrarDiagnostico('reconciliacion', `folio ${folio} por QR`);
         }
       } else {
         const t = await getTransaccion(venta.peyId);
@@ -38,6 +39,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ folio: string 
         if (nuevo && nuevo !== venta.estado && puedeTransicionar(venta.estado, nuevo)) {
           venta = transicionar(venta, nuevo);
           guardarVenta(venta);
+          if (nuevo === 'pagada') registrarDiagnostico('reconciliacion', `folio ${folio} por push`);
         }
       }
     } catch {
