@@ -39,6 +39,8 @@ Funciona y está probado de punta a punta contra un pey simulado (`scripts/smoke
 
 Requiere **Node 22 o superior** (usa `node:sqlite`, sin dependencias nativas).
 
+Para desplegar en producción con Dokploy, ver **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
 ```bash
 npm install
 cp .env.example .env.local     # llena PEY_API_KEY y PEY_WEBHOOK_SECRET
