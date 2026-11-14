@@ -1,254 +1,111 @@
-'use client';
-
-import { useCallback, useEffect, useState } from 'react';
-
-type Metodo = 'codi_pn' | 'codi_qr';
-
-type Venta = {
-  folio: number;
-  numRef: string;
-  estado: 'creada' | 'cobrando' | 'pagada' | 'expirada' | 'cancelada' | 'liberada';
-  montoCentavos: number;
-  metodo: Metodo;
-  concepto: string;
+export const metadata = {
+  title: 'El Mostrador — cobra con CoDi sin terminal',
+  description:
+    'Cobra con CoDi desde el celular del dependiente. Sin terminal, sin comisión. Probado con pagos reales.',
 };
 
-const MAX_DIGITOS = 9;
+const REPO = 'https://github.com/usainbluntmx/el-mostrador';
 
-function pesos(centavos: number): string {
-  return (centavos / 100).toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-export default function Cobrar() {
-  const [digitos, setDigitos] = useState('');
-  const [metodo, setMetodo] = useState<Metodo>('codi_pn');
-  const [telefono, setTelefono] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [venta, setVenta] = useState<Venta | null>(null);
-
-  const centavos = Number(digitos || '0');
-  const ocupado = venta !== null;
-
-  const teclear = (d: string) => {
-    if (ocupado) return;
-    setError(null);
-    setDigitos((prev) => {
-      const siguiente = (prev + d).replace(/^0+(?=\d)/, '');
-      return siguiente.slice(0, MAX_DIGITOS);
-    });
-  };
-
-  const borrar = () => {
-    if (ocupado) return;
-    setDigitos((prev) => prev.slice(0, -1));
-  };
-
-  const cobrar = async () => {
-    if (centavos <= 0) {
-      setError('Escribe el monto primero');
-      return;
-    }
-    if (metodo === 'codi_pn' && telefono.length !== 10) {
-      setError('El teléfono del cliente debe tener 10 dígitos');
-      return;
-    }
-    setError(null);
-    setEnviando(true);
-    try {
-      const res = await fetch('/api/ventas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          montoCentavos: centavos,
-          metodo,
-          telefono: metodo === 'codi_pn' ? telefono : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data?.error ?? 'No se pudo crear el cobro');
-        return;
-      }
-      setVenta(data as Venta);
-    } catch {
-      setError('Sin conexión con el servidor');
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  // Reconciliación: mientras siga `cobrando`, se pregunta al servidor.
-  useEffect(() => {
-    if (!venta || venta.estado !== 'cobrando') return;
-    const folio = venta.folio;
-    const timer = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/ventas/${folio}`, { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = (await res.json()) as Venta;
-        if (data.estado !== 'cobrando') setVenta(data);
-      } catch {
-        /* se reintenta en el siguiente tick */
-      }
-    }, 1500);
-    return () => clearInterval(timer);
-  }, [venta]);
-
-  const nueva = () => {
-    setVenta(null);
-    setDigitos('');
-    setTelefono('');
-    setError(null);
-  };
-
-  const liberar = async () => {
-    if (!venta) return;
-    try {
-      const res = await fetch(`/api/ventas/${venta.folio}/liberar`, { method: 'POST' });
-      if (res.ok) setVenta((await res.json()) as Venta);
-    } catch {
-      /* el demo sigue */
-    }
-  };
-
-  const pagada = venta?.estado === 'pagada' || venta?.estado === 'liberada';
-
-  if (pagada && venta) {
-    return (
-      <div className="pagado" role="alert" aria-live="assertive">
-        <div className="palomita">✓</div>
-        <div className="etiqueta">Pagado</div>
-        <div className="cifra">${pesos(venta.montoCentavos)}</div>
-        <div className="detalle">
-          Folio {venta.numRef}
-          <br />
-          {venta.estado === 'liberada' ? 'Material liberado' : 'Dinero en la cuenta del negocio'}
-        </div>
-        <div className="acciones">
-          {venta.estado === 'pagada' ? (
-            <button className="primario" onClick={liberar}>
-              Liberar para surtir
-            </button>
-          ) : (
-            <button className="primario" onClick={nueva}>
-              Nueva venta
-            </button>
-          )}
-          <button className="secundario" onClick={nueva}>
-            {venta.estado === 'pagada' ? 'Nueva venta' : 'Listo'}
-          </button>
-        </div>
-        <div className="nota">El comprobante ya está en el banco del cliente.</div>
-      </div>
-    );
-  }
-
-  if (venta) {
-    return (
-      <main className="marco">
-        <header className="barra">
-          <span className="marca">El Mostrador</span>
-          <span>Folio {venta.numRef}</span>
-        </header>
-
-        {venta.estado === 'expirada' ? (
-          <div className="esperando">
-            <h2>El cobro expiró</h2>
-            <p>El cliente no pagó en los 6 minutos. No se cobró nada.</p>
-            <button className="cobrar" onClick={nueva}>
-              Empezar de nuevo
-            </button>
-          </div>
-        ) : (
-          <div className="esperando" aria-live="polite">
-            <div className="pulso" />
-            <h2>Esperando al banco</h2>
-            <p>
-              El cobro ya salió al teléfono del cliente. No cierres esta pantalla; se marca solo.
-            </p>
-            <span className="folio">${pesos(venta.montoCentavos)} MXN</span>
-            <button className="cobrar" onClick={nueva} style={{ background: '#6b6154' }}>
-              Cancelar
-            </button>
-          </div>
-        )}
-      </main>
-    );
-  }
-
+export default function Inicio() {
   return (
-    <main className="marco">
-      <header className="barra">
-        <span className="marca">El Mostrador</span>
-        <a href="/corte">Corte del día</a>
+    <main className="landing">
+      <header className="l-barra">
+        <span className="l-marca">El Mostrador</span>
+        <nav className="l-nav">
+          <a href="/cobrar">Demo</a>
+          <a href="/corte">Corte</a>
+          <a href={REPO} target="_blank" rel="noreferrer">
+            Código
+          </a>
+        </nav>
       </header>
 
-      <div className="monto-caja">
-        <div className="monto-etiqueta">Monto a cobrar</div>
-        <div className="monto">
-          <span className="moneda">$</span>
-          <span className={centavos === 0 ? 'cero' : undefined}>{pesos(centavos)}</span>
+      <section className="l-hero">
+        <p className="l-kicker">Hackatón México 2026 · Zero Two Labs</p>
+        <h1>
+          Cobra con CoDi desde el celular del dependiente.
+        </h1>
+        <p className="l-sub">
+          Sin terminal. Sin comisión. La caja del negocio en el teléfono que ya está en el
+          mostrador.
+        </p>
+        <div className="l-cta">
+          <a className="l-boton" href="/cobrar">
+            Probar el cobro
+          </a>
+          <a className="l-boton-2" href={REPO} target="_blank" rel="noreferrer">
+            Ver el código
+          </a>
         </div>
-      </div>
+      </section>
 
-      <div className="teclado">
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
-          <button key={d} className="tecla" onClick={() => teclear(d)}>
-            {d}
-          </button>
-        ))}
-        <button className="tecla sutil" onClick={() => teclear('00')}>
-          00
-        </button>
-        <button className="tecla" onClick={() => teclear('0')}>
-          0
-        </button>
-        <button className="tecla sutil" onClick={borrar} aria-label="Borrar">
-          ←
-        </button>
-      </div>
+      <section className="l-bloque">
+        <h2>Así se cobra</h2>
+        <ol className="l-pasos">
+          <li>
+            <b>Escribe el monto.</b> Teclado grande, sin menús. Como una caja registradora.
+          </li>
+          <li>
+            <b>Manda el cobro.</b> Al teléfono del cliente como solicitud de pago, o como QR en
+            pantalla si no lo tienes.
+          </li>
+          <li>
+            <b>Se pone verde solo.</b> El banco confirma, el webhook firmado marca la venta como
+            pagada. Nadie revisa capturas.
+          </li>
+        </ol>
+      </section>
 
-      <div className="metodos">
-        <button className="metodo" data-on={metodo === 'codi_pn'} onClick={() => setMetodo('codi_pn')}>
-          Al teléfono
-          <small>El cliente recibe el cobro</small>
-        </button>
-        <button className="metodo" data-on={metodo === 'codi_qr'} onClick={() => setMetodo('codi_qr')}>
-          QR en pantalla
-          <small>El cliente escanea</small>
-        </button>
-      </div>
-
-      {metodo === 'codi_pn' && (
-        <div className="campo">
-          <label htmlFor="tel">Teléfono</label>
-          <input
-            id="tel"
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="10 dígitos"
-            maxLength={10}
-            value={telefono}
-            onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
-          />
+      <section className="l-bloque l-dos">
+        <div>
+          <h2>Lo que cuesta hoy</h2>
+          <p>
+            Cada venta con tarjeta paga <b>4.18%</b> con IVA. En un ticket de $3,000 son{' '}
+            <b>$125.28</b>. Con CoDi: <b>$0</b>.
+          </p>
+          <p className="l-mini">
+            Diez ventas al mes migradas a CoDi son $1,250 que se quedan en el negocio.
+          </p>
         </div>
-      )}
+        <div className="l-cifras">
+          <div className="l-cifra">
+            <span>Terminal</span>
+            <b>4.18%</b>
+          </div>
+          <div className="l-cifra l-cifra-verde">
+            <span>CoDi</span>
+            <b>0%</b>
+          </div>
+        </div>
+      </section>
 
-      {error && <p className="aviso">{error}</p>}
+      <section className="l-bloque l-prueba">
+        <h2>Probado, no prometido</h2>
+        <p>
+          Dos pagos reales de $0.01 —uno por push y uno por QR— confirmados por webhook firmado en{' '}
+          <b>3 y 6 milisegundos</b>. La app corre en producción contra el API de pey.
+        </p>
+      </section>
 
-      <button className="cobrar" onClick={cobrar} disabled={enviando || centavos <= 0}>
-        {enviando ? 'Enviando…' : 'Cobrar'}
-      </button>
+      <section className="l-bloque">
+        <h2>Lo que no es</h2>
+        <p>
+          No es otra terminal y no procesa tarjeta: la terminal se queda para quien paga con
+          tarjeta. El Mostrador se lleva el volumen que hoy va a tarjeta o a transferencia, y lo
+          cobra sin comisión.
+        </p>
+        <p className="l-mini">
+          CoDi solo cobra. Las devoluciones se registran en el corte y se pagan por transferencia
+          desde el banco del negocio: no se promete un botón que no existe.
+        </p>
+      </section>
 
-      <p className="pie">
-        Sin terminal. Sin comisión en CoDi.
-        <br />
-        El pago se confirma solo, desde el banco.
-      </p>
+      <footer className="l-pie">
+        <span>Zero Two Labs · Hackatón México 2026</span>
+        <a href={REPO} target="_blank" rel="noreferrer">
+          github.com/usainbluntmx/el-mostrador
+        </a>
+      </footer>
     </main>
   );
 }

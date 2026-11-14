@@ -42,7 +42,7 @@ export default function CortePage() {
     <main className="marco">
       <header className="barra">
         <span className="marca">El Mostrador</span>
-        <a href="/">Cobrar</a>
+        <a href="/cobrar">Cobrar</a>
       </header>
 
       <div className="corte-head">

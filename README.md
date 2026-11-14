@@ -29,7 +29,9 @@ Funciona y está probado de punta a punta contra un pey simulado (`scripts/smoke
 | Corte del día por método + comisión evitada | ✅ |
 | Liberar venta para surtir | ✅ (la "acción verificable") |
 | Pantalla de cobro y de corte | ✅ responsive, teclado numérico grande |
-| Push real contra `api.pey.mx` | ⏳ falta la API key del negocio |
+| Landing pública que explica el producto | ✅ `/` |
+| Instalable en el celular (manifest + iconos) | ✅ `/cobrar` |
+| Push real contra `api.pey.mx` | ✅ probado con $0.01 |
 
 ---
 
@@ -63,6 +65,28 @@ npx next start -p 3100
 # en otra terminal:
 APP_URL=http://127.0.0.1:3100 node scripts/smoke.mjs
 ```
+
+---
+
+## Cómo se usa en el mostrador (piloto)
+
+**No se instala desde una tienda.** Es una web app: el dependiente abre la URL en su celular
+y la agrega a la pantalla de inicio (Compartir → Agregar a inicio). Desde ahí se abre a pantalla
+completa, como cualquier app. No hay tienda, no hay APK, no hay cuenta que crear.
+
+El flujo es uno solo, y es el de la pantalla de cobro:
+
+1. Teclea el monto en el teclado grande.
+2. Elige **al teléfono** (el cliente recibe una solicitud de pago en su banco) o **QR en
+   pantalla** (el cliente escanea desde su app).
+3. La pantalla se pone verde sola cuando el banco confirma. No se revisa nada a mano.
+
+**Qué no se imprime:** en el piloto no hay QR fijo de la tienda. Un QR fijo obliga al cliente a
+escribir el monto y **pierde el folio**, que es lo que amarra la venta con el pago en el corte.
+El QR se genera por venta y se muestra en la pantalla. El QR fijo sin monto y sin expiración
+(`amount: 0`, `expiration: 0`) queda como siguiente paso, para la calcomanía del mostrador.
+
+**Tiempos:** el push expira en 6 minutos y el QR en 10. Si expira, se recobra con el mismo folio.
 
 ---
 

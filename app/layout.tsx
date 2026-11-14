@@ -3,7 +3,17 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'El Mostrador',
-  description: 'Cobra con CoDi desde el celular. Sin terminal.',
+  description: 'Cobra con CoDi desde el celular. Sin terminal, sin comisión.',
+  applicationName: 'El Mostrador',
+  appleWebApp: {
+    capable: true,
+    title: 'El Mostrador',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
 };
 
 export const viewport: Viewport = {
