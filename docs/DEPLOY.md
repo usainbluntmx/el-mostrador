@@ -185,6 +185,8 @@ Para el piloto basta con copiarlo una vez al día.
 | 502 al abrir el dominio | El dominio apunta a un puerto distinto | Internal Port = `3000` |
 | Certificado no se emite | Proxy de Cloudflare activo | DNS only (nube gris) y reintenta |
 | Webhook responde `401` | El secreto no coincide | Copia de nuevo `whsec_...` del portal a la env y redeploy |
+| `/api/salud` dice `no_llega_nada` y `webhooksRechazados: 0` | El proxy de Cloudflare bloquea el webhook antes de llegar al origen | Pon el registro en **DNS only** (nube gris) o crea una regla WAF de excepción para `/api/webhooks/pey` |
+| `/api/salud` dice `firma_no_coincide` | Sí llega, pero el secreto no cuadra | Vuelve a copiar el `whsec_...` del portal y redeploy |
 | La app abre pero el corte está vacío | `DATA_DIR` mal o sin volumen | `DATA_DIR=/app/.data` y volumen montado ahí |
 | El cliente ve un nombre raro | Cuenta de persona física | Es el titular de la cuenta: se resuelve con persona moral o avisando en el mostrador |
 
