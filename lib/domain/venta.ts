@@ -34,7 +34,9 @@ const TRANSICIONES: Record<EstadoVenta, EstadoVenta[]> = {
   cobrando: ['pagada', 'expirada', 'cancelada'],
   pagada: ['liberada'],
   expirada: ['cobrando', 'cancelada'],
-  cancelada: [],
+  // Cancelada puede volver a pagada: si el cliente ya había escaneado,
+  // el dinero entra y el corte tiene que verlo. Se registra como pago tardío.
+  cancelada: ['pagada'],
   liberada: [],
 };
 
@@ -65,9 +67,9 @@ export function transicionar(venta: Venta, hacia: EstadoVenta, ahora = Date.now(
   return siguiente;
 }
 
-/** Estados en los que la venta ya no puede cambiar de opinión. */
+/** Estados en los que la venta ya no puede cambiar de opinión (salvo pago tardío). */
 export function esTerminal(estado: EstadoVenta): boolean {
-  return estado === 'cancelada' || estado === 'liberada';
+  return estado === 'liberada';
 }
 
 /**

@@ -29,6 +29,7 @@ export default function Cobrar() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [venta, setVenta] = useState<Venta | null>(null);
+  const [qr, setQr] = useState<{ imagen: string | null; texto: string | null } | null>(null);
 
   const centavos = Number(digitos || '0');
   const ocupado = venta !== null;
@@ -74,6 +75,9 @@ export default function Cobrar() {
         return;
       }
       setVenta(data as Venta);
+      if (data?.qrImage) {
+        setQr({ imagen: data.qrImage as string, texto: (data.qrString as string) ?? null });
+      }
     } catch {
       setError('Sin conexión con el servidor');
     } finally {
@@ -100,9 +104,21 @@ export default function Cobrar() {
 
   const nueva = () => {
     setVenta(null);
+    setQr(null);
     setDigitos('');
     setTelefono('');
     setError(null);
+  };
+
+  const cancelar = async () => {
+    if (venta) {
+      try {
+        await fetch(`/api/ventas/${venta.folio}/cancelar`, { method: 'POST' });
+      } catch {
+        /* si no hay red, la venta expira sola */
+      }
+    }
+    nueva();
   };
 
   const liberar = async () => {
@@ -116,6 +132,7 @@ export default function Cobrar() {
   };
 
   const pagada = venta?.estado === 'pagada' || venta?.estado === 'liberada';
+  const esQr = venta ? (venta.metodo ?? metodo) === 'codi_qr' : metodo === 'codi_qr';
 
   if (pagada && venta) {
     return (
@@ -163,6 +180,34 @@ export default function Cobrar() {
               Empezar de nuevo
             </button>
           </div>
+        ) : esQr && qr?.imagen ? (
+          <div className="esperando" aria-live="polite">
+            <div className="qr-caja">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`data:image/png;base64,${qr.imagen}`} alt={`QR para cobrar folio ${venta.numRef}`} />
+              <div className="qr-datos">
+                <b>${pesos(venta.montoCentavos)}</b>
+                <span>Folio {venta.numRef}</span>
+              </div>
+            </div>
+            <h2>Que lo escanee</h2>
+            <p>
+              El cliente abre su app bancaria, escanea el código y paga. La pantalla se pone
+              verde sola.
+            </p>
+            <button className="cancelar" onClick={cancelar}>
+              Cancelar
+            </button>
+          </div>
+        ) : esQr ? (
+          <div className="esperando" aria-live="polite">
+            <div className="pulso" />
+            <h2>Generando el QR</h2>
+            <p>Un segundo. El código aparece en esta pantalla.</p>
+            <button className="cancelar" onClick={cancelar}>
+              Cancelar
+            </button>
+          </div>
         ) : (
           <div className="esperando" aria-live="polite">
             <div className="pulso" />
@@ -171,7 +216,7 @@ export default function Cobrar() {
               El cobro ya salió al teléfono del cliente. No cierres esta pantalla; se marca solo.
             </p>
             <span className="folio">${pesos(venta.montoCentavos)} MXN</span>
-            <button className="cobrar" onClick={nueva} style={{ background: '#6b6154' }}>
+            <button className="cancelar" onClick={cancelar}>
               Cancelar
             </button>
           </div>

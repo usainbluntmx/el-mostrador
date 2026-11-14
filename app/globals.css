@@ -314,6 +314,43 @@ body {
   max-width: 300px;
 }
 
+.cancelar {
+  appearance: none;
+  border: 1px solid var(--linea);
+  background: transparent;
+  color: var(--tinta-suave);
+  border-radius: 14px;
+  padding: 13px 26px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.cancelar:active {
+  background: var(--papel-2);
+}
+
+.qr-datos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.qr-datos b {
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.qr-datos span {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+
 .folio {
   font-size: 12px;
   letter-spacing: 0.14em;

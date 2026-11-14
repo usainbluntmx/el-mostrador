@@ -21,7 +21,7 @@ Funciona y está probado de punta a punta contra un pey simulado (`scripts/smoke
 | Pieza | Estado |
 |---|---|
 | Cobro CoDi por push (`POST /codi/pn`) | ✅ |
-| Cobro CoDi por QR (`POST /codi/qr`) | ✅ (backend; la UI de QR falta) |
+| Cobro CoDi por QR (`POST /codi/qr`) | ✅ pantalla con el QR y espera |
 | Webhook con firma Standard Webhooks | ✅ verificada antes de parsear |
 | Idempotencia por `webhook-id` | ✅ |
 | Reconciliación por `GET /transaction/{id}` | ✅ respaldo si el webhook no llega |
@@ -99,6 +99,7 @@ El QR se genera por venta y se muestra en la pantalla. El QR fijo sin monto y si
 | `POST` | `/api/ventas` | Crea la venta y dispara el cobro (push o QR) |
 | `GET` | `/api/ventas/:folio` | Estado; reconcilia contra pey si sigue `cobrando` |
 | `POST` | `/api/ventas/:folio/liberar` | Solo si está pagada: libera el material para surtir |
+| `POST` | `/api/ventas/:folio/cancelar` | Cancela si aún no está pagada |
 | `POST` | `/api/webhooks/pey` | Firma → dedupe → marca pagada |
 | `GET` | `/api/corte?dia=YYYY-MM-DD` | Totales por método + comisión evitada |
 
@@ -109,7 +110,7 @@ creada → cobrando → pagada → liberada
               ↓
            expirada → cobrando (recobro con el mismo folio)
               ↓
-          cancelada
+          cancelada → pagada (pago tardío: el cliente ya había escaneado)
 ```
 
 `pagada` **solo** se alcanza por webhook verificado o por consulta a

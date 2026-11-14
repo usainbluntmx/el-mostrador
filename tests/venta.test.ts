@@ -60,7 +60,14 @@ describe('máquina de estados', () => {
   it('cancelada y liberada son terminales', () => {
     const cancelada = transicionar(base, 'cancelada');
     expect(() => transicionar(cancelada, 'cobrando')).toThrow(TransicionInvalida);
-    expect(() => transicionar(cancelada, 'pagada')).toThrow(TransicionInvalida);
+    expect(() => transicionar(cancelada, 'expirada')).toThrow(TransicionInvalida);
+  });
+
+  it('un pago tardío sobre una venta cancelada sí se registra', () => {
+    const cancelada = transicionar(base, 'cancelada');
+    const pagada = transicionar(cancelada, 'pagada', 42);
+    expect(pagada.estado).toBe('pagada');
+    expect(pagada.pagadaEn).toBe(42);
   });
 });
 

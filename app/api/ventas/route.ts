@@ -49,7 +49,14 @@ export async function POST(req: Request) {
       venta = { ...venta, peyId: r.transactionId, concepto };
       guardarVenta(venta);
       return NextResponse.json(
-        { folio: venta.folio, numRef: venta.numRef, estado: venta.estado, montoCentavos: venta.montoCentavos },
+        {
+          folio: venta.folio,
+          numRef: venta.numRef,
+          estado: venta.estado,
+          metodo: venta.metodo,
+          concepto: venta.concepto,
+          montoCentavos: venta.montoCentavos,
+        },
         { status: 201 },
       );
     }
@@ -67,6 +74,8 @@ export async function POST(req: Request) {
         folio: venta.folio,
         numRef: venta.numRef,
         estado: venta.estado,
+        metodo: venta.metodo,
+        concepto: venta.concepto,
         montoCentavos: venta.montoCentavos,
         qrImage: r.qrImage,
         qrString: r.qrString,
