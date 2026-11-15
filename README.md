@@ -40,6 +40,7 @@ Funciona y está probado de punta a punta contra un pey simulado (`scripts/smoke
 | Landing pública que explica el producto | ✅ `/` |
 | Instalable en el celular (manifest + iconos) | ✅ `/cobrar` |
 | Push real contra `api.pey.mx` | ✅ probado con $0.01 |
+| QR real contra `api.pey.mx` | ✅ pagado con app bancaria, webhook en producción (15 nov) |
 
 ---
 
