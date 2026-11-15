@@ -199,6 +199,29 @@ export function registrarDiagnostico(tipo: string, detalle = ''): void {
 
 export type ConteoDiagnostico = { tipo: string; total: number; ultimoEn: number };
 
+/** Rechazos de webhook posteriores a `desde`. Sirve para no tomar un escaneo
+ *  suelto de hace diez horas como si el portal estuviera mandando firmas malas. */
+export function rechazosDesde(desde: number): number {
+  const fila = abrir()
+    .prepare("SELECT COUNT(*) AS total FROM diagnostico WHERE tipo = 'webhook_rechazado' AND recibido_en >= ?")
+    .get(desde) as { total: number } | undefined;
+  return Number(fila?.total ?? 0);
+}
+
+/** Ventas que quedaron `cobrando` y llevan rato sin confirmarse: candidatas a
+ *  reconciliar sin que nadie tenga la pantalla abierta. */
+export function ventasPorReconciliar(antesDe: number, limite = 50): number[] {
+  const filas = abrir()
+    .prepare(
+      `SELECT folio FROM ventas
+       WHERE estado = 'cobrando' AND pey_id IS NOT NULL AND creada_en <= ?
+       ORDER BY folio ASC LIMIT ?`,
+    )
+    .all(antesDe, limite) as Array<{ folio: number }>;
+  return filas.map((f) => Number(f.folio));
+}
+
+
 export function conteoDiagnostico(): { conteos: ConteoDiagnostico[]; ultimoRechazo: { motivo: string; en: number } | null } {
   const d = abrir();
   const conteos = d

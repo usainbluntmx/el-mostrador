@@ -24,6 +24,15 @@ En el panel de tu dominio:
   certificado esté emitido. La naranja bloquea el desafío HTTP de Let's Encrypt y el
   certificado nunca sale.
 
+> **Cuidado con los túneles de Cloudflare (Zero Trust).** Si en *Networks → Tunnels →
+> Published applications* existe una entrada para este mismo hostname, hay **dos rutas
+> compitiendo** por el nombre: la del túnel y la del registro A. Gana la que Cloudflare
+> tenga escrita en el DNS, y puede cambiar sola al guardar una edición en el panel.
+> Revisa que no haya una entrada con el hostname `mostrador.zerotwolabs.xyz`; si existe
+> y no la usas, bórrala. Una entrada con *Path* tipo `^/blog` y *Service URL*
+> `http://localhost:80` manda solo ese path a la máquina donde corre `cloudflared` y deja
+> el resto del sitio muerto.
+
 Verifica desde tu máquina antes de seguir:
 
 ```bash
@@ -114,6 +123,17 @@ En **Domains** → **Add Domain**:
 
 Dokploy pone Traefik al frente y emite el certificado. Si el certificado no sale, revisa el
 paso 1: casi siempre es el proxy de Cloudflare.
+
+**El orden importa al pasar a DNS only.** Con el proxy naranja y HTTPS apagado en Dokploy,
+Cloudflare te está sirviendo en modo *Flexible*: hay HTTPS en el borde y HTTP plano entre
+Cloudflare y el servidor. Si pones la nube gris sin haber activado HTTPS en Dokploy, el
+sitio deja de responder en 443. Secuencia correcta:
+
+1. Activa **HTTPS** en Dokploy y espera a que el certificado esté emitido (la nube puede
+   seguir naranja: el desafío pasa por Cloudflare).
+2. Comprueba que `https://mostrador.zerotwolabs.xyz` cargue.
+3. Ahora sí, pon el registro en **DNS only**.
+4. Revisa que siga cargando y que el webhook entre (`/api/salud` → `webhook_ok`).
 
 ---
 

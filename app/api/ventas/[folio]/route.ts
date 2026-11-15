@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getVenta, guardarVenta, registrarDiagnostico } from '@/lib/store';
-import { estadoDesdePey, puedeTransicionar, transicionar } from '@/lib/domain/venta';
-import { getTransaccion, getTransaccionesQr, statusDe } from '@/lib/pey/client';
+import { getVenta } from '@/lib/store';
+import { reconciliarVenta } from '@/lib/reconciliar';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,29 +21,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ folio: string 
   if (!venta) return NextResponse.json({ error: 'Venta no encontrada' }, { status: 404 });
 
   if (venta.estado === 'cobrando' && venta.peyId) {
-    try {
-      if (venta.metodo === 'codi_qr') {
-        // El QR se identifica por IDC, no por ULID de transacción.
-        const r = await getTransaccionesQr(venta.peyId);
-        const pagada = r.items?.find((t) => (t.status ?? '').toUpperCase() === 'PAID');
-        if (pagada && puedeTransicionar(venta.estado, 'pagada')) {
-          venta = transicionar(venta, 'pagada');
-          venta = { ...venta, peyId: pagada.id ?? venta.peyId };
-          guardarVenta(venta);
-          registrarDiagnostico('reconciliacion', `folio ${folio} por QR`);
-        }
-      } else {
-        const t = await getTransaccion(venta.peyId);
-        const nuevo = estadoDesdePey(statusDe(t));
-        if (nuevo && nuevo !== venta.estado && puedeTransicionar(venta.estado, nuevo)) {
-          venta = transicionar(venta, nuevo);
-          guardarVenta(venta);
-          if (nuevo === 'pagada') registrarDiagnostico('reconciliacion', `folio ${folio} por push`);
-        }
-      }
-    } catch {
-      /* si pey no responde, se devuelve el último estado conocido */
-    }
+    venta = (await reconciliarVenta(numero)) ?? venta;
   }
 
   return NextResponse.json(venta);

@@ -25,6 +25,7 @@ Funciona y está probado de punta a punta contra un pey simulado (`scripts/smoke
 | Webhook con firma Standard Webhooks | ✅ verificada antes de parsear |
 | Idempotencia por `webhook-id` | ✅ |
 | Reconciliación por `GET /transaction/{id}` | ✅ respaldo si el webhook no llega |
+| Reconciliación en segundo plano (cada 30 s) | ✅ el verde no depende del webhook ni de la pantalla abierta |
 | Máquina de estados de la venta | ✅ 27 pruebas |
 | Corte del día por método + comisión evitada | ✅ |
 | Liberar venta para surtir | ✅ (la "acción verificable") |
@@ -116,6 +117,11 @@ creada → cobrando → pagada → liberada
 
 `pagada` **solo** se alcanza por webhook verificado o por consulta a
 `GET /transaction/{id}`. Nunca por el redirect del navegador.
+
+**Y no depende de que el webhook llegue.** Al arrancar el servidor (`instrumentation.ts`) se
+enciende un ciclo que cada 30 s reconcilia las ventas que siguen en `cobrando`: si el
+dependiente cobra, guarda el celular y se va a surtir, la venta se cierra sola y aparece en
+el corte. Se apaga con `RECONCILIACION=off`.
 
 ---
 
