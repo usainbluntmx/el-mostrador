@@ -60,7 +60,7 @@ export async function crearPush(args: {
   numRef: string;
   folio: number;
 }): Promise<RespuestaPush> {
-  return llamar<RespuestaPush>('/codi/pn', {
+  const data = await llamar<RespuestaPush>('/codi/pn', {
     method: 'POST',
     body: JSON.stringify({
       amount: args.montoCentavos / 100,
@@ -71,6 +71,11 @@ export async function crearPush(args: {
       metadata: { folio: String(args.folio), origen: 'el-mostrador' },
     }),
   });
+  // Sin transactionId la venta quedaría cobrando sin llave de conciliación.
+  if (!data?.transactionId) {
+    throw new PeyApiError({ message: 'pey no devolvió el id de la transacción', tipo: 'RESPUESTA_INVALIDA', status: 502 });
+  }
+  return data;
 }
 
 export type RespuestaQr = { id: string; qrString: string; qrImage: string | null };
@@ -81,19 +86,26 @@ export async function crearQr(args: {
   numRef: string;
   folio: number;
 }): Promise<RespuestaQr> {
-  // 0 = el QR no expira (sirve para pruebas largas y para calcomanía impresa).
-  const expiracion = Number(process.env.QR_EXPIRACION ?? 600);
-  return llamar<RespuestaQr>('/codi/qr', {
+  // 15 minutos por defecto: el cliente tiene que abrir su banco, iniciar
+  // sesión y confirmar. Con 10 minutos el QR se vencía en la fila.
+  // 0 = no expira (calcomanía impresa o pruebas largas).
+  const expiracion = Number(process.env.QR_EXPIRACION ?? 900);
+  const data = await llamar<RespuestaQr>('/codi/qr', {
     method: 'POST',
     body: JSON.stringify({
       amount: args.montoCentavos / 100,
       concept: args.concepto,
       numRef: args.numRef,
-      expiration: Number.isFinite(expiracion) ? expiracion : 600,
+      expiration: Number.isFinite(expiracion) ? expiracion : 900,
       generateImage: true,
       metadata: { folio: String(args.folio), origen: 'el-mostrador' },
     }),
   });
+  // Sin id no hay QR ni forma de reconciliar: mejor fallar claro que guardar null.
+  if (!data?.id) {
+    throw new PeyApiError({ message: 'pey no devolvió el id del QR', tipo: 'RESPUESTA_INVALIDA', status: 502 });
+  }
+  return data;
 }
 
 export type Transaccion = {

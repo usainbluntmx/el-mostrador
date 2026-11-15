@@ -88,7 +88,7 @@ PEY_BASE_URL=https://api.pey.mx
 NEGOCIO_NOMBRE=<nombre de la ferretería>
 PEY_API_KEY=<tu api key>
 PEY_WEBHOOK_SECRET=<tu whsec_...>
-QR_EXPIRACION=600
+QR_EXPIRACION=900
 ```
 
 - `NEGOCIO_NOMBRE` es lo que el cliente ve en el concepto del cobro. En el piloto va el

@@ -133,6 +133,42 @@ export default function Cobrar() {
     }
   };
 
+  /**
+   * Recobro con el mismo folio: el folio es lo que amarra el pago con la venta,
+   * así que un cobro vencido no se convierte en venta nueva. En QR no hace falta
+   * nada; en push hay que teclear el teléfono otra vez porque no se guarda.
+   */
+  const recobrar = async () => {
+    if (!venta) return;
+    if (venta.metodo === 'codi_pn' && telefono.length !== 10) {
+      setError('El teléfono del cliente debe tener 10 dígitos');
+      return;
+    }
+    setError(null);
+    setEnviando(true);
+    try {
+      const res = await fetch(`/api/ventas/${venta.folio}/recobrar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(venta.metodo === 'codi_pn' ? { telefono } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error ?? 'No se pudo recobrar');
+        return;
+      }
+      setQr(null);
+      setVenta(data as Venta);
+      if (data?.qrImage) {
+        setQr({ imagen: data.qrImage as string, texto: (data.qrString as string) ?? null });
+      }
+    } catch {
+      setError('Sin conexión con el servidor');
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const pagada = venta?.estado === 'pagada' || venta?.estado === 'liberada';
   const esQr = venta ? (venta.metodo ?? metodo) === 'codi_qr' : metodo === 'codi_qr';
 
@@ -182,9 +218,34 @@ export default function Cobrar() {
         {venta.estado === 'expirada' ? (
           <div className="esperando">
             <h2>El cobro expiró</h2>
-            <p>El cliente no pagó en los 6 minutos. No se cobró nada.</p>
+            <p>
+              El cliente no pagó a tiempo. No se cobró nada. Se puede recobrar con el folio{' '}
+              {venta.numRef}.
+            </p>
+            {venta.metodo === 'codi_pn' && (
+              <div className="campo">
+                <label htmlFor="tel-recobro">Teléfono</label>
+                <input
+                  id="tel-recobro"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="10 dígitos"
+                  maxLength={10}
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                />
+              </div>
+            )}
+            {error && (
+              <p className="aviso" role="alert">
+                {error}
+              </p>
+            )}
+            <button className="primario" onClick={recobrar} disabled={enviando}>
+              {enviando ? 'Reemitiendo…' : `Recobrar folio ${venta.numRef}`}
+            </button>
             <button className="cancelar" onClick={nueva}>
-              Empezar de nuevo
+              Nueva venta
             </button>
           </div>
         ) : esQr && qr?.imagen ? (

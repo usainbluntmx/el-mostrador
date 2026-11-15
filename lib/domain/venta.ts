@@ -33,7 +33,11 @@ const TRANSICIONES: Record<EstadoVenta, EstadoVenta[]> = {
   creada: ['cobrando', 'cancelada'],
   cobrando: ['pagada', 'expirada', 'cancelada'],
   pagada: ['liberada'],
-  expirada: ['cobrando', 'cancelada'],
+  // Expirada puede volver a cobrando (recobro con el mismo folio) y también
+  // puede caer en pagada: si el cliente pagó en el segundo 601 de un QR de
+  // 10 minutos, el dinero entró y el corte tiene que verlo. Un pago tardío
+  // nunca se descarta.
+  expirada: ['cobrando', 'cancelada', 'pagada'],
   // Cancelada puede volver a pagada: si el cliente ya había escaneado,
   // el dinero entra y el corte tiene que verlo. Se registra como pago tardío.
   cancelada: ['pagada'],

@@ -46,6 +46,14 @@ describe('máquina de estados', () => {
     expect(recobro.estado).toBe('cobrando');
   });
 
+  it('un pago tardío sobre una venta expirada sí se registra', () => {
+    const expirada = transicionar(transicionar(base, 'cobrando'), 'expirada');
+    const pagada = transicionar(expirada, 'pagada', 77);
+    expect(pagada.estado).toBe('pagada');
+    expect(pagada.pagadaEn).toBe(77);
+    expect(pagada.folio).toBe(base.folio);
+  });
+
   it('pagada es idempotente: un webhook repetido no rompe', () => {
     const pagada = transicionar(transicionar(base, 'cobrando'), 'pagada', 10);
     expect(transicionar(pagada, 'pagada', 99).pagadaEn).toBe(10);

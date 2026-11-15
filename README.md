@@ -33,7 +33,7 @@ Funciona y está probado de punta a punta contra un pey simulado (`scripts/smoke
 | Idempotencia por `webhook-id` | ✅ |
 | Reconciliación por `GET /transaction/{id}` | ✅ respaldo si el webhook no llega |
 | Reconciliación en segundo plano (cada 30 s) | ✅ el verde no depende del webhook ni de la pantalla abierta |
-| Máquina de estados de la venta | ✅ 27 pruebas |
+| Máquina de estados de la venta | ✅ 29 pruebas |
 | Corte del día por método + comisión evitada | ✅ |
 | Liberar venta para surtir | ✅ (la "acción verificable") |
 | Pantalla de cobro y de corte | ✅ responsive, teclado numérico grande |
@@ -59,7 +59,7 @@ npm run dev                    # http://localhost:3000
 Pruebas y tipos:
 
 ```bash
-npm test          # 27 pruebas: estados, firma, validación, store
+npm test          # 29 pruebas: estados, firma, validación, store
 npm run typecheck
 ```
 
@@ -97,7 +97,10 @@ escribir el monto y **pierde el folio**, que es lo que amarra la venta con el pa
 El QR se genera por venta y se muestra en la pantalla. El QR fijo sin monto y sin expiración
 (`amount: 0`, `expiration: 0`) queda como siguiente paso, para la calcomanía del mostrador.
 
-**Tiempos:** el push expira en 6 minutos y el QR en 10. Si expira, se recobra con el mismo folio.
+**Tiempos:** el push expira en 6 minutos y el QR en 15 (`QR_EXPIRACION`). Si expira, el botón
+**Recobrar** reemite el cobro **con el mismo folio**: en QR no pide nada, en push pide el
+teléfono otra vez porque no se guarda. Un cobro vencido nunca se convierte en venta nueva —
+el folio es lo que amarra el pago con la venta.
 
 ---
 
@@ -109,6 +112,7 @@ El QR se genera por venta y se muestra en la pantalla. El QR fijo sin monto y si
 | `GET` | `/api/ventas/:folio` | Estado; reconcilia contra pey si sigue `cobrando` |
 | `POST` | `/api/ventas/:folio/liberar` | Solo si está pagada: libera el material para surtir |
 | `POST` | `/api/ventas/:folio/cancelar` | Cancela si aún no está pagada |
+| `POST` | `/api/ventas/:folio/recobrar` | Reemite el cobro de una venta expirada con el mismo folio |
 | `POST` | `/api/webhooks/pey` | Firma → dedupe → marca pagada |
 | `GET` | `/api/corte?dia=YYYY-MM-DD` | Totales por método + comisión evitada |
 | `GET` | `/api/salud` | Diagnóstico: ¿el webhook está entrando o solo el respaldo? |
@@ -121,7 +125,8 @@ El contrato real del webhook, capturado con pagos de $0.01: **[docs/WEBHOOK-REAL
 creada → cobrando → pagada → liberada
               ↓
            expirada → cobrando (recobro con el mismo folio)
-              ↓
+              ↓  ↘
+              ↓   pagada (pago tardío: el cliente pagó al vencer el QR)
           cancelada → pagada (pago tardío: el cliente ya había escaneado)
 ```
 
@@ -148,7 +153,9 @@ el corte. Se apaga con `RECONCILIACION=off`.
 6. **La comisión evitada usa la tasa de referencia de la terminal con IVA (3.6% + IVA = 4.176%)**
    y se dice en pantalla: si el negocio ya tiene tarifa promocional, el ahorro real
    es menor. No se infla el número.
-7. **SQLite local con el módulo nativo de Node.** La persistencia está aislada en
+7. **Un pago tardío nunca se descarta.** Si el QR venció y el dinero entró igual, la venta
+   pasa de `expirada` a `pagada` y aparece en el corte. Rechazarlo sería perder dinero real.
+8. **SQLite local con el módulo nativo de Node.** La persistencia está aislada en
    `lib/store.ts` para cambiar a Postgres en producción sin tocar las rutas.
 
 ---
