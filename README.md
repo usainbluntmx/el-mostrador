@@ -105,6 +105,8 @@ El QR se genera por venta y se muestra en la pantalla. El QR fijo sin monto y si
 | `GET` | `/api/corte?dia=YYYY-MM-DD` | Totales por método + comisión evitada |
 | `GET` | `/api/salud` | Diagnóstico: ¿el webhook está entrando o solo el respaldo? |
 
+El contrato real del webhook, capturado con pagos de $0.01: **[docs/WEBHOOK-REAL.md](docs/WEBHOOK-REAL.md)**.
+
 ### Máquina de estados
 
 ```
