@@ -17,7 +17,7 @@ cuánto se dejó de pagar en comisión.
 El sistema visual está documentado en **[design/plan.md](design/plan.md)**: paleta derivada del
 ticket de mostrador, tipografía (Archivo + IBM Plex Mono para datos) y las reglas de motion.
 
-**Video de 90 s:** **[docs/demo.mp4](docs/demo.mp4)** — el flujo completo, del monto al corte.
+**Video de 90 s:** **[docs/demo.mp4](docs/demo.mp4)** — el flujo completo, del monto al corte, con narración. La versión muda está en [docs/demo-sin-voz.mp4](docs/demo-sin-voz.mp4).
 
 ---
 
