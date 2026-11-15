@@ -8,9 +8,12 @@
  * de seguridad.
  */
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-  if (process.env.RECONCILIACION === 'off') return;
-
-  const { arrancarReconciliacion } = await import('./lib/reconciliar');
-  arrancarReconciliacion();
+  // La comparación positiva es obligatoria: webpack compila este archivo también
+  // para el runtime edge y, con `NEXT_RUNTIME` inlineado, la rama muerta
+  // desaparece. Con un `if (!==) return` el import de `node:fs` sí entra al
+  // bundle del borde y Next falla con `UnhandledSchemeError`.
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { arrancarReconciliacion } = await import('./lib/reconciliar');
+    arrancarReconciliacion();
+  }
 }

@@ -83,6 +83,11 @@ const global = globalThis as unknown as { __mostradorReconciliacion?: Estado };
  * intervalo debe seguir siendo uno solo.
  */
 export function arrancarReconciliacion(cadaMs = 30_000): void {
+  if (process.env.RECONCILIACION === 'off') {
+    console.info('[reconciliacion] desactivada por RECONCILIACION=off');
+    return;
+  }
+
   const estado = (global.__mostradorReconciliacion ??= { arrancado: false, timer: null, corriendo: false });
   if (estado.arrancado) return;
   estado.arrancado = true;

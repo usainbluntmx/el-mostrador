@@ -110,7 +110,7 @@ check('GET /api/ventas/:folio dice pagada', estado.estado === 'pagada');
 
 const corte = await (await fetch(`${APP}/api/corte`)).json();
 check('el corte suma la venta', corte.totalCentavos === monto, `${corte.totalCentavos}`);
-check('el corte calcula comisión evitada', corte.comisionEvitadaCentavos === Math.round(monto * 0.0418));
+check('el corte calcula comisión evitada', corte.comisionEvitadaCentavos === Math.round(monto * 0.04176));
 
 // ---------- 6. liberar ----------
 const lib = await fetch(`${APP}/api/ventas/${venta.folio}/liberar`, { method: 'POST' });

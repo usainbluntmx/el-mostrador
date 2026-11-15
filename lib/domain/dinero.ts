@@ -20,5 +20,10 @@ export function formatearMxn(centavos: number): string {
   }).format(centavos / 100);
 }
 
-/** Tasa efectiva de Clip con IVA, para el contador de ahorro. */
-export const TASA_CLIP_ESTANDAR = 0.0418;
+/**
+ * Tasa efectiva de la terminal con IVA, para el contador de ahorro.
+ * 3.6% + IVA (16%) = 4.176%. Se redondea a cinco decimales, no a 4.18%:
+ * con 4.18% el ahorro salía inflado por centavos y el ticket de $3,000 no
+ * cuadraba con la cifra que se muestra en la landing ($125.28).
+ */
+export const TASA_CLIP_ESTANDAR = 0.04176;

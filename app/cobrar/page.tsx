@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type Metodo = 'codi_pn' | 'codi_qr';
 
@@ -30,6 +30,7 @@ export default function Cobrar() {
   const [error, setError] = useState<string | null>(null);
   const [venta, setVenta] = useState<Venta | null>(null);
   const [qr, setQr] = useState<{ imagen: string | null; texto: string | null } | null>(null);
+  const ultimoDigito = useRef(0);
 
   const centavos = Number(digitos || '0');
   const ocupado = venta !== null;
@@ -37,6 +38,7 @@ export default function Cobrar() {
   const teclear = (d: string) => {
     if (ocupado) return;
     setError(null);
+    ultimoDigito.current += 1;
     setDigitos((prev) => {
       const siguiente = (prev + d).replace(/^0+(?=\d)/, '');
       return siguiente.slice(0, MAX_DIGITOS);
@@ -102,13 +104,13 @@ export default function Cobrar() {
     return () => clearInterval(timer);
   }, [venta]);
 
-  const nueva = () => {
+  const nueva = useCallback(() => {
     setVenta(null);
     setQr(null);
     setDigitos('');
     setTelefono('');
     setError(null);
-  };
+  }, []);
 
   const cancelar = async () => {
     if (venta) {
@@ -137,11 +139,12 @@ export default function Cobrar() {
   if (pagada && venta) {
     return (
       <div className="pagado" role="alert" aria-live="assertive">
-        <div className="palomita">✓</div>
-        <div className="etiqueta">Pagado</div>
-        <div className="cifra">${pesos(venta.montoCentavos)}</div>
+        <div className="sello-pagado">
+          <span>Pagado</span>
+        </div>
+        <div className="cifra tabular">${pesos(venta.montoCentavos)}</div>
         <div className="detalle">
-          Folio {venta.numRef}
+          Folio <b>{venta.numRef}</b>
           <br />
           {venta.estado === 'liberada' ? 'Material liberado' : 'Dinero en la cuenta del negocio'}
         </div>
@@ -161,7 +164,7 @@ export default function Cobrar() {
             </button>
           )}
         </div>
-        <div className="nota">El comprobante ya está en el banco del cliente.</div>
+        <p className="nota">El comprobante ya está en el banco del cliente.</p>
       </div>
     );
   }
@@ -170,23 +173,31 @@ export default function Cobrar() {
     return (
       <main className="marco">
         <header className="barra">
-          <span className="marca">El Mostrador</span>
-          <span>Folio {venta.numRef}</span>
+          <a className="marca" href="/">
+            El Mostrador
+          </a>
+          <span className="mono">Folio {venta.numRef}</span>
         </header>
 
         {venta.estado === 'expirada' ? (
           <div className="esperando">
             <h2>El cobro expiró</h2>
             <p>El cliente no pagó en los 6 minutos. No se cobró nada.</p>
-            <button className="cobrar" onClick={nueva}>
+            <button className="cancelar" onClick={nueva}>
               Empezar de nuevo
             </button>
           </div>
         ) : esQr && qr?.imagen ? (
           <div className="esperando" aria-live="polite">
             <div className="qr-caja">
+              {/* El QR llega como data URL en base64: `next/image` no aplica. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`data:image/png;base64,${qr.imagen}`} alt={`QR para cobrar folio ${venta.numRef}`} />
+              <img
+                src={`data:image/png;base64,${qr.imagen}`}
+                alt={`QR para cobrar el folio ${venta.numRef}`}
+                width={230}
+                height={230}
+              />
               <div className="qr-datos">
                 <b>${pesos(venta.montoCentavos)}</b>
                 <span>Folio {venta.numRef}</span>
@@ -203,7 +214,7 @@ export default function Cobrar() {
           </div>
         ) : esQr ? (
           <div className="esperando" aria-live="polite">
-            <div className="pulso" />
+            <div className="pulso" aria-hidden="true" />
             <h2>Generando el QR</h2>
             <p>Un segundo. El código aparece en esta pantalla.</p>
             <button className="cancelar" onClick={cancelar}>
@@ -212,7 +223,7 @@ export default function Cobrar() {
           </div>
         ) : (
           <div className="esperando" aria-live="polite">
-            <div className="pulso" />
+            <div className="pulso" aria-hidden="true" />
             <h2>Esperando al banco</h2>
             <p>
               El cobro ya salió al teléfono del cliente. No cierres esta pantalla; se marca solo.
@@ -230,15 +241,20 @@ export default function Cobrar() {
   return (
     <main className="marco">
       <header className="barra">
-        <span className="marca">El Mostrador</span>
+        <a className="marca" href="/">
+          El Mostrador
+        </a>
         <a href="/corte">Corte del día</a>
       </header>
 
       <div className="monto-caja">
         <div className="monto-etiqueta">Monto a cobrar</div>
-        <div className="monto">
+        <div className="monto" data-largo={digitos.length >= 7}>
           <span className="moneda">$</span>
-          <span className={centavos === 0 ? 'cero' : undefined}>{pesos(centavos)}</span>
+          <span key={ultimoDigito.current} className={centavos === 0 ? 'cero' : 'digito-nuevo'}>
+            <span>{pesos(centavos).split('.')[0]}</span>
+            <span className="decimales">.{pesos(centavos).split('.')[1]}</span>
+          </span>
         </div>
       </div>
 
@@ -254,17 +270,27 @@ export default function Cobrar() {
         <button className="tecla" onClick={() => teclear('0')}>
           0
         </button>
-        <button className="tecla sutil" onClick={borrar} aria-label="Borrar">
+        <button className="tecla sutil" onClick={borrar} aria-label="Borrar el último dígito">
           ←
         </button>
       </div>
 
-      <div className="metodos">
-        <button className="metodo" data-on={metodo === 'codi_pn'} onClick={() => setMetodo('codi_pn')}>
+      <div className="metodos" role="group" aria-label="Forma de cobro">
+        <button
+          className="metodo"
+          data-on={metodo === 'codi_pn'}
+          aria-pressed={metodo === 'codi_pn'}
+          onClick={() => setMetodo('codi_pn')}
+        >
           Al teléfono
           <small>El cliente recibe el cobro</small>
         </button>
-        <button className="metodo" data-on={metodo === 'codi_qr'} onClick={() => setMetodo('codi_qr')}>
+        <button
+          className="metodo"
+          data-on={metodo === 'codi_qr'}
+          aria-pressed={metodo === 'codi_qr'}
+          onClick={() => setMetodo('codi_qr')}
+        >
           QR en pantalla
           <small>El cliente escanea</small>
         </button>
@@ -285,7 +311,11 @@ export default function Cobrar() {
         </div>
       )}
 
-      {error && <p className="aviso">{error}</p>}
+      {error && (
+        <p className="aviso" role="alert">
+          {error}
+        </p>
+      )}
 
       <button className="cobrar" onClick={cobrar} disabled={enviando || centavos <= 0}>
         {enviando ? 'Enviando…' : 'Cobrar'}

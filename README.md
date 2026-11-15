@@ -8,9 +8,14 @@ cuánto se dejó de pagar en comisión.
 
 **Hackatón México 2026** — pista principal: uso de CoDi y del API de pey.
 
+![Portada](docs/portada.png)
+
 | Cobrar | Pagado | Corte |
 |---|---|---|
 | ![Cobrar](docs/cobrar.png) | ![Pagado](docs/pagado.png) | ![Corte](docs/corte.png) |
+
+El sistema visual está documentado en **[design/plan.md](design/plan.md)**: paleta derivada del
+ticket de mostrador, tipografía (Archivo + IBM Plex Mono para datos) y las reglas de motion.
 
 ---
 
@@ -137,7 +142,7 @@ el corte. Se apaga con `RECONCILIACION=off`.
    se descarta. No hay historial de clientes.
 4. **Montos en centavos enteros.** Cero floats en la base.
 5. **El corte es del día en CDMX** (UTC−6), no del servidor en UTC.
-6. **La comisión evitada usa la tasa de referencia de la terminal con IVA (4.18%)**
+6. **La comisión evitada usa la tasa de referencia de la terminal con IVA (3.6% + IVA = 4.176%)**
    y se dice en pantalla: si el negocio ya tiene tarifa promocional, el ahorro real
    es menor. No se infla el número.
 7. **SQLite local con el módulo nativo de Node.** La persistencia está aislada en
